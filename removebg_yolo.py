@@ -2,7 +2,7 @@ from ultralytics import YOLO
 from PIL import Image
 
 def remove(img):
-    model=YOLO('yolov8s-seg.pt')
+    model=YOLO('yolov8m-seg.pt')
     results=model(img)
     mask=results[0].masks.data[0]
     mask=(mask.numpy()*255).astype('uint8')

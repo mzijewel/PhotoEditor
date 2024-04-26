@@ -8,6 +8,9 @@ from resize_dialog import ResizeDialog
 import remove_bg
 import removebg_yolo
 
+import cv2
+import numpy as np
+
 
 
 
@@ -52,6 +55,7 @@ class ImageEditor:
         self.root.bind("<Control-z>",self.reset)      # pressed Ctrl+Z
         self.root.bind("<Control-c>",self.crop)       # pressed Ctrl+S
         self.root.bind("<Control-n>",self.new_img)    # pressed Ctrl+N
+        self.root.bind("<Control-p>",self.remove_part)    # pressed Ctrl+P
 
         
 
@@ -195,8 +199,35 @@ class ImageEditor:
     def remove_bg_yolo(self,event=None):
         self.image=removebg_yolo.remove(self.image)
         self.update_canvas()
-        
 
+    def onTrack(x):
+        global radius
+        radius=x
+
+    def remove_part(self,event=None):
+        # radius=1
+        # cv2.namedWindow("Trackbars")
+        # cv2.resizeWindow("Trackbars",360,240)
+        # cv2.createTrackbar('radius',"Trackbars",1,10,self.onTrack)
+        
+        # Convert PIL image to NumPy array
+        image = np.array(self.image)
+
+        x1, y1, x2, y2 = self.canvas.coords(self.box_id)
+        x1,y1,x2,y2=int(x1),int(y1),int(x2),int(y2)
+        
+        # Create a mask where the object to be removed is identified
+        mask = np.zeros_like(image[:, :, 0])
+    
+        mask[y1:y2, x1:x2] = 255  # Set the region inside the ROI to 255 (white)
+        # Apply inpainting to remove the object
+        result = cv2.inpaint(image, mask, inpaintRadius=3, flags=cv2.INPAINT_TELEA)
+
+        self.image=Image.fromarray(result)
+        self.update_canvas()
+
+
+    
     def update_canvas(self):
         rimg=self.image
 
@@ -219,6 +250,7 @@ class ImageEditor:
     
     
 
+
     def reset(self,event=None):
         self.image=self.orginal_image
         self.update_canvas()
@@ -227,6 +259,8 @@ class ImageEditor:
         path=filedialog.asksaveasfilename()
         if(path):
             self.image.save(path)
+    
+
 
 
     
@@ -253,9 +287,12 @@ if __name__ == "__main__":
     file_menu.add_command(label="Crop (Ctrl+C)", command=app.crop)
     file_menu.add_command(label="Remove background", command=app.remove_bg)
     file_menu.add_command(label="Remove background (yolo)", command=app.remove_bg_yolo)
+    file_menu.add_command(label="Remove Part (Ctrl+P)", command=app.remove_part)
 
     file_menu.add_command(label="Reset (Ctrl+Z)", command=app.reset)
     file_menu.add_command(label="Save (Ctrl+S)", command=app.save)
+
+    
 
     about_menu = tk.Menu(menu_bar, tearoff=0)
     menu_bar.add_cascade(label="About", menu=about_menu)
